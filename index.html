@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>재직증명서 발급</title>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "Noto Sans KR", "Malgun Gothic", sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: 28px; }
+    .sub { margin-top: 7px; color: #6b7280; font-size: 14px; }
+    .privacy { font-size: 12px; color: #6b7280; text-align: right; line-height: 1.55; }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .panel {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.04);
+    }
+    .section-title { font-size: 16px; font-weight: 700; margin: 0 0 14px; }
+    .field { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: #374151; }
+    input, select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 11px;
+      font-size: 14px;
+      background: white;
+    }
+    input:focus, select:focus { outline: 2px solid #c7d2fe; border-color: #818cf8; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 11px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .primary { background: #111827; color: white; }
+    .secondary { background: #eef2ff; color: #3730a3; }
+    .danger { background: #fef2f2; color: #b91c1c; }
+    .light { background: #f3f4f6; color: #374151; }
+    .full { grid-column: 1 / -1; }
+    .seal-box {
+      margin-top: 18px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 16px;
+    }
+    .seal-preview {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 8px;
+      min-height: 42px;
+    }
+    .seal-preview img { width: 58px; height: 58px; object-fit: contain; }
+    .hint { font-size: 12px; color: #6b7280; line-height: 1.5; }
+    .preview-wrap { overflow-x: auto; }
+    .preview-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+    .certificate {
+      width: 794px;
+      min-height: 1123px;
+      background: #fff;
+      margin: 0 auto;
+      padding: 62px 68px 52px;
+      color: #111;
+      box-shadow: 0 8px 30px rgba(0,0,0,.08);
+    }
+    .cert-title {
+      text-align: center;
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 35px;
+      letter-spacing: 14px;
+      font-weight: 700;
+      margin: 0 0 74px;
+      padding-left: 14px;
+    }
+    .cert-section { margin-bottom: 52px; }
+    .cert-section h3 {
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 16px;
+      margin: 0 0 12px 6px;
+    }
+    table.cert-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 14px;
+    }
+    .cert-table td {
+      border: 1px solid #222;
+      padding: 10px 9px;
+      height: 42px;
+      vertical-align: middle;
+    }
+    .cert-table .label {
+      width: 17%;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .cert-table .value { width: 33%; }
+    .cert-table .wide { text-align: left; padding-left: 14px; }
+    .statement {
+      margin-top: 76px;
+      text-align: center;
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+    .issue-date {
+      margin-top: 74px;
+      text-align: center;
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 15px;
+      word-spacing: 15px;
+    }
+    .company {
+      position: relative;
+      width: 100%;
+      margin-top: 95px;
+      font-family: "Batang", "BatangChe", serif;
+      font-size: 14px;
+      line-height: 2.4;
+      padding-left: 14px;
+    }
+    .company-row { display: flex; align-items: center; min-height: 34px; }
+    .company-label { width: 98px; letter-spacing: 9px; white-space: nowrap; }
+    .company-value { flex: 1; }
+    .representative { position: relative; display: inline-flex; align-items: center; min-height: 48px; }
+    .seal-on-cert {
+      position: absolute;
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      right: -44px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: .9;
+    }
+    .empty-message { font-size: 13px; color: #6b7280; margin-top: 8px; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .panel.form-panel { max-width: 680px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .privacy { text-align: left; }
+    }
+    @media print {
+      body { background: white; }
+      .topbar, .form-panel, .preview-actions { display: none !important; }
+      .app { padding: 0; margin: 0; max-width: none; }
+      .layout { display: block; }
+      .panel { padding: 0; border: 0; box-shadow: none; }
+      .certificate { box-shadow: none; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>재직증명서 자동발급</h1>
+        <div class="sub">직원정보를 한 번 저장해두고 불러와서 바로 PDF로 발급합니다.</div>
+      </div>
+      <div class="privacy">직원정보는 서버가 아니라 현재 브라우저에만 저장됩니다.<br>공용 PC에서는 사용 후 직원정보를 삭제하세요.</div>
+    </div>
+
+    <div class="layout">
+      <div class="panel form-panel">
+        <div class="section-title">직원정보</div>
+
+        <div class="field">
+          <label for="employeeSelect">저장된 직원 불러오기</label>
+          <select id="employeeSelect"><option value="">새 직원 입력</option></select>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="name">이름</label>
+            <input id="name" autocomplete="off" placeholder="예: 홍길동" />
+          </div>
+          <div class="field">
+            <label for="rrn">주민등록번호</label>
+            <input id="rrn" autocomplete="off" placeholder="000000-0000000" maxlength="14" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="address">주소</label>
+          <input id="address" autocomplete="off" placeholder="주소 입력" />
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="department">근무부서</label>
+            <input id="department" autocomplete="off" placeholder="예: 운영지원" />
+          </div>
+          <div class="field">
+            <label for="position">직위</label>
+            <input id="position" autocomplete="off" placeholder="예: 이사" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="joinDate">입사일</label>
+          <input id="joinDate" type="date" />
+        </div>
+
+        <div class="field">
+          <label for="purpose">제출용도</label>
+          <input id="purpose" autocomplete="off" placeholder="예: 기타 제출용" value="기타 제출용" />
+        </div>
+
+        <div class="buttons">
+          <button class="secondary" id="newBtn" type="button">새 직원</button>
+          <button class="primary" id="saveBtn" type="button">저장 / 수정</button>
+          <button class="danger full" id="deleteBtn" type="button">선택 직원 삭제</button>
+        </div>
+
+        <div class="seal-box">
+          <div class="section-title" style="margin-bottom:6px">회사 직인</div>
+          <div class="hint">직인은 GitHub에 올리지 않고 이 브라우저에만 저장합니다. PNG/JPG 이미지를 한 번 등록하면 다음 발급부터 자동 사용됩니다.</div>
+          <div class="field" style="margin-top:10px">
+            <input id="sealInput" type="file" accept="image/png,image/jpeg,image/webp" />
+          </div>
+          <div class="seal-preview" id="sealPreview"><span class="empty-message">등록된 직인 없음</span></div>
+          <button class="light" id="removeSealBtn" type="button" style="width:100%; margin-top:8px">직인 삭제</button>
+        </div>
+      </div>
+
+      <div class="panel preview-wrap">
+        <div class="preview-actions">
+          <button class="light" id="printBtn" type="button">인쇄</button>
+          <button class="primary" id="pdfBtn" type="button">PDF 다운로드</button>
+        </div>
+
+        <div class="certificate" id="certificate">
+          <div class="cert-title">재직증명서</div>
+
+          <div class="cert-section">
+            <h3>1. 인적사항</h3>
+            <table class="cert-table">
+              <tr>
+                <td class="label">성명 (한글)</td>
+                <td class="value" id="pName"></td>
+                <td class="label">주민등록번호</td>
+                <td class="value" id="pRrn"></td>
+              </tr>
+              <tr>
+                <td class="label">주소</td>
+                <td class="wide" colspan="3" id="pAddress"></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="cert-section">
+            <h3>2. 재직사항 및 제출용도</h3>
+            <table class="cert-table">
+              <tr>
+                <td class="label">근무부서</td>
+                <td class="value" id="pDepartment"></td>
+                <td class="label">직위</td>
+                <td class="value" id="pPosition"></td>
+              </tr>
+              <tr>
+                <td class="label">재직기간</td>
+                <td class="wide" colspan="3" id="pPeriod"></td>
+              </tr>
+              <tr>
+                <td class="label">제출용도</td>
+                <td class="wide" colspan="3" id="pPurpose"></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="statement">위의 기재사항이 사실과 다름없음을 증명합니다.</div>
+          <div class="issue-date" id="pIssueDate"></div>
+
+          <div class="company">
+            <div class="company-row"><div class="company-label">회사명</div><div class="company-value">주식회사 제이피생활건강</div></div>
+            <div class="company-row"><div class="company-label">대표자</div><div class="company-value"><span class="representative">김 광 석&nbsp;&nbsp;(인)<img id="certSeal" class="seal-on-cert" alt="직인" style="display:none" /></span></div></div>
+            <div class="company-row"><div class="company-label">사업자등록</div><div class="company-value">176-81-03564</div></div>
+            <div class="company-row"><div class="company-label">주소</div><div class="company-value">서울특별시 송파구 충민로 66, 가든파이브라이프 제8층 와이8104호</div></div>
+            <div class="company-row"><div class="company-label">전화</div><div class="company-value">070-7543-1815</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const EMPLOYEE_KEY = 'employment_employees_v1';
+  const SEAL_KEY = 'employment_company_seal_v1';
+  const $ = (id) => document.getElementById(id);
+  const fields = ['name','rrn','address','department','position','joinDate','purpose'];
+  let selectedId = '';
+
+  function loadEmployees() {
+    try { return JSON.parse(localStorage.getItem(EMPLOYEE_KEY) || '[]'); }
+    catch { return []; }
+  }
+
+  function saveEmployees(list) {
+    localStorage.setItem(EMPLOYEE_KEY, JSON.stringify(list));
+  }
+
+  function todayParts() {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth()+1, day: d.getDate() };
+  }
+
+  function korDate(dateString) {
+    if (!dateString) return '';
+    const [y,m,d] = dateString.split('-').map(Number);
+    return `${y}년 ${m}월 ${d}일`;
+  }
+
+  function ymdCompact() {
+    const {y,m,day} = todayParts();
+    return `${y}${String(m).padStart(2,'0')}${String(day).padStart(2,'0')}`;
+  }
+
+  function formatRrnInput(value) {
+    const digits = value.replace(/\D/g,'').slice(0,13);
+    return digits.length > 6 ? `${digits.slice(0,6)}-${digits.slice(6)}` : digits;
+  }
+
+  function refreshSelect() {
+    const employees = loadEmployees();
+    const select = $('employeeSelect');
+    select.innerHTML = '<option value="">새 직원 입력</option>';
+    employees.sort((a,b) => a.name.localeCompare(b.name,'ko')).forEach(emp => {
+      const opt = document.createElement('option');
+      opt.value = emp.id;
+      opt.textContent = `${emp.name} · ${emp.department || '-'} · ${emp.position || '-'}`;
+      select.appendChild(opt);
+    });
+    select.value = selectedId;
+  }
+
+  function clearForm() {
+    selectedId = '';
+    fields.forEach(f => $(f).value = '');
+    $('purpose').value = '기타 제출용';
+    $('employeeSelect').value = '';
+    updatePreview();
+  }
+
+  function getFormData() {
+    const data = {};
+    fields.forEach(f => data[f] = $(f).value.trim());
+    return data;
+  }
+
+  function setFormData(emp) {
+    fields.forEach(f => $(f).value = emp[f] || '');
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const data = getFormData();
+    const {y,m,day} = todayParts();
+    $('pName').textContent = data.name;
+    $('pRrn').textContent = data.rrn;
+    $('pAddress').textContent = data.address;
+    $('pDepartment').textContent = data.department;
+    $('pPosition').textContent = data.position;
+    $('pPurpose').textContent = data.purpose;
+    $('pPeriod').textContent = data.joinDate ? `${korDate(data.joinDate)} 부터 ${y}년 ${m}월 ${day}일 현재까지` : '';
+    $('pIssueDate').textContent = `${y} 년    ${String(m).padStart(2,'0')} 월    ${String(day).padStart(2,'0')} 일`;
+  }
+
+  function saveCurrentEmployee() {
+    const data = getFormData();
+    if (!data.name) return alert('이름을 입력해주세요.');
+    if (!data.joinDate) return alert('입사일을 입력해주세요.');
+
+    const employees = loadEmployees();
+    if (selectedId) {
+      const idx = employees.findIndex(e => e.id === selectedId);
+      if (idx >= 0) employees[idx] = { ...employees[idx], ...data, updatedAt: Date.now() };
+    } else {
+      selectedId = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
+      employees.push({ id: selectedId, ...data, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    saveEmployees(employees);
+    refreshSelect();
+    alert('직원정보를 저장했습니다. 다음부터 목록에서 바로 불러올 수 있습니다.');
+  }
+
+  function deleteCurrentEmployee() {
+    if (!selectedId) return alert('삭제할 저장 직원을 먼저 선택해주세요.');
+    const employees = loadEmployees();
+    const emp = employees.find(e => e.id === selectedId);
+    if (!confirm(`${emp?.name || '선택한 직원'} 정보를 삭제할까요?`)) return;
+    saveEmployees(employees.filter(e => e.id !== selectedId));
+    clearForm();
+    refreshSelect();
+  }
+
+  function loadSeal() {
+    const seal = localStorage.getItem(SEAL_KEY);
+    const preview = $('sealPreview');
+    const certSeal = $('certSeal');
+    if (seal) {
+      preview.innerHTML = `<img src="${seal}" alt="직인 미리보기"><span class="hint">등록된 직인을 PDF에 사용합니다.</span>`;
+      certSeal.src = seal;
+      certSeal.style.display = 'block';
+    } else {
+      preview.innerHTML = '<span class="empty-message">등록된 직인 없음</span>';
+      certSeal.removeAttribute('src');
+      certSeal.style.display = 'none';
+    }
+  }
+
+  async function downloadPdf() {
+    const data = getFormData();
+    if (!data.name || !data.rrn || !data.address || !data.department || !data.position || !data.joinDate || !data.purpose) {
+      return alert('이름, 주민등록번호, 주소, 근무부서, 직위, 입사일, 제출용도를 모두 입력해주세요.');
+    }
+    updatePreview();
+    const btn = $('pdfBtn');
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'PDF 만드는 중...';
+    try {
+      const cert = $('certificate');
+      const canvas = await html2canvas(cert, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      const img = canvas.toDataURL('image/jpeg', 0.96);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      pdf.addImage(img, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      pdf.save(`재직증명서_${data.name}_${ymdCompact()}.pdf`);
+    } catch (err) {
+      console.error(err);
+      alert('PDF 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = old;
+    }
+  }
+
+  fields.forEach(f => $(f).addEventListener('input', updatePreview));
+  $('rrn').addEventListener('input', e => { e.target.value = formatRrnInput(e.target.value); updatePreview(); });
+
+  $('employeeSelect').addEventListener('change', e => {
+    selectedId = e.target.value;
+    if (!selectedId) return clearForm();
+    const emp = loadEmployees().find(x => x.id === selectedId);
+    if (emp) setFormData(emp);
+  });
+
+  $('newBtn').addEventListener('click', clearForm);
+  $('saveBtn').addEventListener('click', saveCurrentEmployee);
+  $('deleteBtn').addEventListener('click', deleteCurrentEmployee);
+  $('pdfBtn').addEventListener('click', downloadPdf);
+  $('printBtn').addEventListener('click', () => window.print());
+
+  $('sealInput').addEventListener('change', e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return alert('직인 이미지는 2MB 이하 파일을 사용해주세요.');
+    const reader = new FileReader();
+    reader.onload = () => {
+      localStorage.setItem(SEAL_KEY, reader.result);
+      loadSeal();
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('removeSealBtn').addEventListener('click', () => {
+    localStorage.removeItem(SEAL_KEY);
+    loadSeal();
+  });
+
+  refreshSelect();
+  loadSeal();
+  updatePreview();
+})();
+</script>
+</body>
+</html>
